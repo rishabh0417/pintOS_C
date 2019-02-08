@@ -85,9 +85,10 @@ typedef int tid_t;
 struct thread
   {
     /* Owned by thread.c. */
-    bool is_sleeping;
-    int64_t wake_after;
+    bool is_sleeping;                   /* Status whether the thread is sleeping */
+    int64_t wake_after;                 /* time after which the thread has to wake*/
     tid_t tid;                          /* Thread identifier. */
+    int64_t size_sleepers;              /* size of static sleeping threads list. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */

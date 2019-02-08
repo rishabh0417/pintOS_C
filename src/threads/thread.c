@@ -51,7 +51,6 @@ struct kernel_thread_frame
    of time */
 static struct list sleeping_threads;
 
-
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
@@ -87,12 +86,11 @@ static bool sleep_less_func (const struct list_elem *a, const struct list_elem *
 static void thread_wake(void){
   /* This stores the elapsed time from the OS boot. */
   int64_t elapsed_time = timer_ticks();
+  enum intr_level old_level;
 
-  while (true){
-    if (list_empty(&sleeping_threads)) {
-      return;
-    }
-    
+  do {
+      if (list_empty(&sleeping_threads)) return;
+      else{
       /* This gets the first element of the sleeping threads. */
       struct list_elem *iterator = list_front(&sleeping_threads);
 
@@ -101,31 +99,39 @@ static void thread_wake(void){
 
       /* No thread to be waked up yet. */
       int64_t waking_up_time = thr->wake_after;
-      if (waking_up_time > elapsed_time) {
-        return;
-      }
-      
+      if (waking_up_time > elapsed_time) return;
+      else { 
         list_pop_front(&sleeping_threads);
-
-        /* This queues the thread in the ready_list*/
-        thread_unblock(thr);  
-  }
+        /* This queues the thread in the ready_list*/    
+        ASSERT (is_thread (thr));
+        /* disable interrupts before unblocking*/
+        old_level = intr_disable ();
+        /* check if this is a thread type. */
+        ASSERT (thr->status == THREAD_BLOCKED);
+        /* add to ready list */
+        list_push_back (&ready_list, &thr->elem);
+        /* assign ready status from blocked */
+        thr->status = THREAD_READY;
+        /* enable interrupts*/
+        intr_set_level (old_level);
+      }
+    }
+  } while (1);
 }
 
 void
 sleep_until (int64_t ticks){
-   struct thread *curr = thread_current();
-
+  struct thread *curr = thread_current();
+  size_t sizer = list_size(&sleeping_threads);
   enum intr_level old_level;
-
   ASSERT (!intr_context())
-
   old_level = intr_disable();
-  curr -> status = THREAD_BLOCKED;
-  curr -> is_sleeping = true;
   curr -> wake_after = ticks;
-  if (curr != idle_thread)  list_insert_ordered(&sleeping_threads, &curr->elem, sleep_less_func, NULL);
-
+  curr -> is_sleeping = true;
+  curr -> status = THREAD_BLOCKED;
+  curr -> size_sleepers = sizer;
+  if (curr == idle_thread){ ; }
+  else  list_insert_ordered(&sleeping_threads, &curr->elem, sleep_less_func, NULL);
   /* this thread yields and runs the next thread. */
   schedule();
   intr_set_level (old_level);
