@@ -82,16 +82,11 @@ typedef int tid_t;
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
 
-struct blocked_thread
-{
-    int is_to_be_waked_up;             /* true if the thread is required to be waked up */
-    int64_t wake_after;
-};
-
 struct thread
   {
     /* Owned by thread.c. */
-    struct blocked_thread block;        /* If the thread is to be blocked*/
+    bool is_sleeping;
+    int64_t wake_after;
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */

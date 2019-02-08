@@ -81,7 +81,7 @@ static tid_t allocate_tid (void);
 static bool sleep_less_func (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
-  return thread_a->block.wake_after < thread_b->block.wake_after;
+  return thread_a->wake_after < thread_b->wake_after;
 }
 
 static void thread_wake(void){
@@ -100,7 +100,7 @@ static void thread_wake(void){
       struct thread *thr = list_entry(iterator, struct thread, elem);
 
       /* No thread to be waked up yet. */
-      int64_t waking_up_time = thr->block.wake_after;
+      int64_t waking_up_time = thr->wake_after;
       if (waking_up_time > elapsed_time) {
         return;
       }
@@ -122,8 +122,8 @@ sleep_until (int64_t ticks){
 
   old_level = intr_disable();
   curr -> status = THREAD_BLOCKED;
-  curr -> block.is_to_be_waked_up = 1;
-  curr -> block.wake_after = ticks;
+  curr -> is_sleeping = true;
+  curr -> wake_after = ticks;
   if (curr != idle_thread)  list_insert_ordered(&sleeping_threads, &curr->elem, sleep_less_func, NULL);
 
   /* this thread yields and runs the next thread. */
@@ -152,7 +152,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  
+
   list_init (&sleeping_threads);
 
   /* Set up a thread structure for the running thread. */
